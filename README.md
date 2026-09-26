@@ -4,6 +4,13 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 
+<p align="center">
+  <a href="https://buymeacoffee.com/sumitbanik">
+    <img src="https://raw.githubusercontent.com/pachadotdev/buymeacoffee-badges/main/bmc-yellow.svg" alt="Buy Me a Coffee" width="180">
+  </a>
+</p>
+
+
 **Compile human prompts into dense LLM machine language — save up to 70% on token costs.**
 
 `tokentoken` is a Python SDK and CLI that compresses verbose text into a minimal, LLM-native representation that any capable model can interpret without a codebook — and recovers it on demand.
