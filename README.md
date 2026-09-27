@@ -20,6 +20,12 @@
 
 ## Installation
 
+### PyPi
+```bash
+pip install tokentoken
+```
+
+### From Source
 Requires Python 3.9+.
 
 ```bash
