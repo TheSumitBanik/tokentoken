@@ -4,6 +4,17 @@ import tempfile
 import os
 
 
+@pytest.fixture(autouse=True)
+def isolated_cwd(tmp_path, monkeypatch):
+    """Run each test inside a temp cwd.
+
+    CLI commands default to outputs like dense.txt / compressed_long.txt in the
+    current directory; without this fixture a test run overwrites real artifacts
+    in the repo root.
+    """
+    monkeypatch.chdir(tmp_path)
+
+
 @pytest.fixture
 def sample_text():
     """Sample text for testing."""
