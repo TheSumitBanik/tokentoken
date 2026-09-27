@@ -1,4 +1,6 @@
 # tokentoken/router.py
+import warnings
+
 
 def execute_compression(provider: str, model: str, system_prompt: str, user_text: str, api_key: str = None, host: str = None, base_url: str = None) -> str:
     if provider == "ollama":
@@ -8,7 +10,7 @@ def execute_compression(provider: str, model: str, system_prompt: str, user_text
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_text}
         ])
-        return response['message']['content']
+        return response['message']['content'] or ""
 
     elif provider == "openai":
         from openai import OpenAI
@@ -20,7 +22,13 @@ def execute_compression(provider: str, model: str, system_prompt: str, user_text
                 {"role": "user", "content": user_text}
             ]
         )
-        return response.choices[0].message.content
+        choice = response.choices[0]
+        if choice.finish_reason == "length":
+            warnings.warn(
+                "Provider stopped the response at the token limit "
+                "(finish_reason='length'); the compressed output may be incomplete."
+            )
+        return choice.message.content or ""
 
     elif provider == "gemini":
         from google import genai
@@ -30,7 +38,7 @@ def execute_compression(provider: str, model: str, system_prompt: str, user_text
             model=model,
             contents=[system_prompt + "\n\n" + user_text]
         )
-        return response.text
+        return response.text or ""
 
     elif provider == "anthropic":
         from anthropic import Anthropic
@@ -41,6 +49,8 @@ def execute_compression(provider: str, model: str, system_prompt: str, user_text
             system=system_prompt,
             messages=[{"role": "user", "content": user_text}]
         )
-        return response.content[0].text
+        return "".join(
+            block.text for block in response.content if getattr(block, "type", None) == "text"
+        )
         
     raise ValueError(f"Unknown provider: {provider}")

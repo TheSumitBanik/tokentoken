@@ -9,7 +9,10 @@ from .utils import (
     calculate_compression_metrics,
     estimate_readability,
     calculate_token_efficiency,
-    validate_compression_result
+    validate_compression_result,
+    wrap_source,
+    SOURCE_GUARD,
+    ESCALATION_NOTE
 )
 from .router import execute_compression
 
@@ -69,22 +72,44 @@ class TokenToken:
         original_tokens = count_tokens(text)
         check_breakeven_threshold(original_tokens)
 
-        system_prompt = PROMPTS[mode]
+        system_prompt = f"{PROMPTS[mode]}\n{SOURCE_GUARD}"
         
         # Paper Appendix E.4.2: Handling ultra-long documents by chunking
         chunks = chunk_text(text, chunk_size_tokens=100000)
         dense_chunks = []
+        expansion_fallback = False
         
         for chunk in chunks:
+            chunk_tokens = count_tokens(chunk)
+            user_text = wrap_source(chunk)
             dense = execute_compression(
                 provider=self.provider,
                 model=self.model,
                 system_prompt=system_prompt,
-                user_text=chunk,
+                user_text=user_text,
                 api_key=self.api_key,
                 host=self.host,
                 base_url=self.base_url
             )
+            
+            if count_tokens(dense) > chunk_tokens:
+                # The model expanded the input instead of compressing it (it executed
+                # instructions embedded in the source, or elaborated). Retry once with
+                # an explicit size constraint, then fall back to the original chunk so
+                # a failed compression never reports negative savings.
+                dense = execute_compression(
+                    provider=self.provider,
+                    model=self.model,
+                    system_prompt=f"{system_prompt}{ESCALATION_NOTE}",
+                    user_text=user_text,
+                    api_key=self.api_key,
+                    host=self.host,
+                    base_url=self.base_url
+                )
+                if count_tokens(dense) > chunk_tokens:
+                    expansion_fallback = True
+                    dense = chunk
+            
             dense_chunks.append(dense)
             
         final_dense_text = "\n\n".join(dense_chunks)
@@ -95,6 +120,13 @@ class TokenToken:
         readability = estimate_readability(final_dense_text)
         efficiency = calculate_token_efficiency(final_dense_text)
         validation = validate_compression_result(text, final_dense_text, self.provider, self.model)
+        if expansion_fallback:
+            validation["compression_warning"] = (
+                "Compression failed: the model returned more tokens than the input, "
+                "so the original text was preserved instead. The source likely contains "
+                "instructions the model executed rather than compressed. "
+                "Try a different --mode or model."
+            )
         
         return CompressionResult(
             dense_text=final_dense_text,
@@ -159,7 +191,7 @@ Preserve all key information, entities, actions, and temporal relationships.
 Session ID: {session_id or f"session_{i}"}
 
 Memory to compress:
-{memory}"""
+{wrap_source(memory)}"""
             
             compressed = execute_compression(
                 provider=self.provider,
@@ -198,7 +230,7 @@ Sender: {sender}
 Receiver: {receiver}
 
 Message to compress:
-{message}"""
+{wrap_source(message)}"""
         
         compressed = execute_compression(
             provider=self.provider,
@@ -280,8 +312,8 @@ Provide a brief answer."""
             compressed = execute_compression(
                 provider=self.provider,
                 model=self.model,
-                system_prompt=PROMPTS[CompressionMode.BT_P13],  # Use ASCII anchor for structured compression
-                user_text=chunk,
+                system_prompt=f"{PROMPTS[CompressionMode.BT_P13]}\n{SOURCE_GUARD}",  # Use ASCII anchor for structured compression
+                user_text=wrap_source(chunk),
                 api_key=self.api_key,
                 host=self.host,
                 base_url=self.base_url

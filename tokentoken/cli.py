@@ -85,8 +85,10 @@ def compress(
     
     table.add_row("Original Tokens", str(result.original_tokens))
     table.add_row("Compressed Tokens", str(result.compressed_tokens))
-    table.add_row("Token Reduction", f"{result.savings_pct}%")
-    table.add_row("Retention Ratio", f"{result.retention_ratio:.2%}")
+    savings = f"{result.savings_pct}%"
+    table.add_row("Token Reduction", f"[red]{savings}[/red]" if result.savings_pct < 0 else savings)
+    retention = f"{result.retention_ratio:.2%}"
+    table.add_row("Retention Ratio", f"[red]{retention}[/red]" if result.retention_ratio > 1 else retention)
     table.add_row("Output File", output)
     table.add_row("Compression Mode", mode)
     table.add_row("Provider", provider)
@@ -108,6 +110,14 @@ def compress(
             f"[yellow]{result.validation['cot_warning']}[/yellow]",
             title="Chain-of-Thought Tax Warning",
             border_style="yellow"
+        ))
+    
+    warning = (result.validation or {}).get("compression_warning") or (result.validation or {}).get("expansion_warning")
+    if warning:
+        console.print(Panel(
+            f"[red]{escape(str(warning))}[/red]",
+            title="Compression Warning",
+            border_style="red"
         ))
     
     console.print(table)
