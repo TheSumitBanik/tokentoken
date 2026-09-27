@@ -1,5 +1,6 @@
 # tokentoken
 
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/tokentoken?period=total&units=INTERNATIONAL_SYSTEM&left_color=RED&right_color=GREY&left_text=downloads)](https://pepy.tech/projects/tokentoken)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 
